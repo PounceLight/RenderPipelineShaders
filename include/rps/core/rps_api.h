@@ -73,7 +73,8 @@ extern "C" {
     }                                                               \
     static inline HandleType rps##Name##ToHandle(ObjectType* ptr)   \
     {                                                               \
-        return {ptr};                                               \
+        HandleType handle = {ptr}; \
+        return handle;                                               \
     }
 
 /// @brief Constant for an invalid RPS object handle value.
