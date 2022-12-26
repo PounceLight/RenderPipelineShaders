@@ -1327,9 +1327,28 @@ namespace rps
                 const auto& currTrans   = transitions[cmd.cmdId];
                 const auto& resInstance = resourceInstances[currTrans.access.resourceId];
 
+/*
                 const auto& prevAccess = (currTrans.prevTransition != RenderGraph::INVALID_TRANSITION)
                                              ? transitions[currTrans.prevTransition].access.access
                                              : (resInstance.isPendingInit ? noAccess : resInstance.initialAccess);
+/*/
+                // A persistent resource must be consistently transitioned to the initial state from what it was before,
+                // as its data must be kept for temporal operations.
+                // Note that this is still leaky, as a dynamically changing render graph would not guarantee
+                // that the initial state of a resource is the same betweem frames. If the postamble of frame A
+                // transitions so the initial state in frame A, while the preamble of frame B expects it to be in the initial
+                // state of frame B, there could easily be a mismatch.
+                // To work around this, resources might need to keep their last states across graph updates.
+                // Also notes that this could be tied to the `RPS_ACCESS_DISCARD_OLD_DATA_BIT` flag.
+                //
+                // OTOH a resource which is not persistent however should be discarded, thus we allow `prevAccess`
+                // below to point at the invalid `0` transition.
+                const bool isPersistent = resInstance.desc.flags & RPS_RESOURCE_FLAG_PERSISTENT_BIT;
+                const auto& prevAccess = (!isPersistent || currTrans.prevTransition != RenderGraph::INVALID_TRANSITION)
+                                             ? transitions[currTrans.prevTransition].access.access
+                                             : (resInstance.isPendingInit ? noAccess : resInstance.initialAccess);
+//*/
+
 
                 if (resInstance.desc.IsImage())
                 {
