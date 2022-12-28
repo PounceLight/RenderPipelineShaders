@@ -177,6 +177,8 @@ namespace rps
                 resInstance.allocPlacement  = {RPS_INDEX_NONE_U32, 0};
             };
 
+            const bool usingAliasing = !rpsAllBitsSet(context.renderGraph.GetCreateInfo().renderGraphFlags, RPS_RENDER_GRAPH_NO_GPU_MEMORY_ALIASING);
+
             // Initialize resource instances
             for (uint32_t iRes = 0; iRes < resDecls.size(); iRes++)
             {
@@ -254,7 +256,15 @@ namespace rps
                     bDescUpdated              = true;
                 }
 
-                SetRuntimeResourcePendingCreate(*pResInstance, bDescUpdated && (iRes >= numParamResources));
+                // ----
+                //SetRuntimeResourcePendingCreate(*pResInstance, bDescUpdated && (iRes >= numParamResources));
+                // ----
+                // Tom hack: force recreate non-persistent resources, as their memory placements must move in dynamic graphs.
+                const bool isPersistent = rpsAllBitsSet(pResInstance->desc.flags, RPS_RESOURCE_FLAG_PERSISTENT_BIT);
+                const bool forceRecreate = !isPersistent && usingAliasing;
+                SetRuntimeResourcePendingCreate(*pResInstance, (bDescUpdated || forceRecreate) && iRes >= numParamResources);
+                // ----
+
                 pResInstance->isPendingInit = false;
 
                 // Handle temporal resources:
